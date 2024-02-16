@@ -8,7 +8,7 @@ class cell():
         pass
 
     def remove(self, waarde) -> None:
-        if waarde in self.possible and len(self.possible) > 1:
+        if waarde in self.possible:
             self.possible.remove(waarde)
             if len(self.possible) == 1:
                 self.sett(self.possible[0])
@@ -121,7 +121,7 @@ columns = [column([cells[i*9+j] for i in range(9)]) for j in range(9)]
 
 squares = [square([cells[i%3+(i//3*9)+(j%3)*3+(j//3)*27] for i in range(9)]) for j in range(9)]
 
-eigen_regel = "9000500003000000790250900300602090000003085146040630290100964080870003924450872610"
+eigen_regel = "059100080107000650000007000060003000020000090004009006000800560008051072700000030"
 for i in range(81):
     cells[i].sett(int(eigen_regel[i]))
 
@@ -146,6 +146,3 @@ for i in range(100):
         break
 
 grid()
-
-leeg = [i for i in cells if len(i.possible) == 0 and i.value == 0]
-print(len(leeg))
