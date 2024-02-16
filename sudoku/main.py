@@ -121,9 +121,9 @@ columns = [column([cells[i*9+j] for i in range(9)]) for j in range(9)]
 
 squares = [square([cells[i%3+(i//3*9)+(j%3)*3+(j//3)*27] for i in range(9)]) for j in range(9)]
 
-eigen_regel = "059100080107000650000007000060003000020000090004009006000800560008051072700000030"
+regel = "059100080107000650000007000060003000020000090004009006000800560008051072700000030"
 for i in range(81):
-    cells[i].sett(int(eigen_regel[i]))
+    cells[i].sett(int(regel[i]))
 
 for i in range(100):
     done = True
