@@ -18,7 +18,6 @@ class cell():
         self.value = waarde
         if waarde != 0:
             self.possible = []
-            self.update_group()
 
     def update_group(self):
         for r in rows[self.number//9]:
@@ -28,18 +27,6 @@ class cell():
         for s in squares[self.number//27][int(self.number%9/3)]:
             s.remove(self.value)
 
-class row():
-    def __init__(self, cells: list[cell]) -> None:
-        self.possible = [1,2,3,4,5,6,7,8,9]
-        self.containing = cells
-        pass
-
-    def update_cells(self, waarde):
-        if waarde in self.possible:
-            self.possible.remove(waarde)
-        for i in self.containing:
-            i.remove(waarde)
-        
 
 def grid():
     getallen = []
@@ -58,32 +45,19 @@ columns = [[cells[i*9+j] for i in range(9)] for j in range(9)]
 
 squares = [[[cells[i%3+(i//3*9)+j*3+k*27] for i in range(9)] for j in range(3)] for k in range(3)]
 
-eigen_regel = "007106040502000018004090703200389000000004000040061050170000080008010500035000260"
+eigen_regel = "000020345008000007050094008039400760000309400060075083042951800085730010071248039"
 for i in range(81):
     cells[i].sett(int(eigen_regel[i]))
 
+for i in range(100):
+    done = True
+    for j in cells:
+        if j.value != 0:
+            j.update_group()
+        else:
+            done = False
+    if done:
+        print("klaar")
+        break
+
 grid()
-
-board1 = """
-[3, 8, 7]|[1, 2, 6]|[9, 4, 5]
-[5, 9, 2]|[0, 0, 0]|[6, 1, 8]
-[6, 1, 4]|[0, 9, 0]|[7, 2, 3]
-[2, 0, 0]|[3, 8, 9]|[0, 7, 0]
-[0, 0, 0]|[0, 0, 4]|[0, 0, 0]
-[0, 4, 0]|[0, 6, 1]|[0, 5, 0]
-[1, 7, 0]|[0, 0, 0]|[0, 8, 0]
-[0, 0, 8]|[0, 1, 0]|[5, 0, 0]
-[0, 3, 5]|[0, 0, 0]|[2, 6, 0]"""
-
-board2 = """
-[3, 8, 7]|[1, 2, 6]|[9, 4, 5]
-[5, 9, 2]|[0, 0, 0]|[6, 1, 8]
-[6, 1, 4]|[0, 9, 0]|[7, 2, 3]
-[2, 0, 0]|[3, 8, 9]|[0, 7, 0]
-[0, 0, 0]|[0, 0, 4]|[0, 0, 0]
-[0, 4, 0]|[0, 6, 1]|[0, 5, 0]
-[1, 7, 0]|[0, 0, 0]|[0, 8, 0]
-[0, 0, 8]|[0, 1, 0]|[5, 0, 0]
-[0, 3, 5]|[0, 0, 0]|[2, 6, 0]"""
-
-print(board1==board2)
