@@ -14,6 +14,9 @@
  If there are the same amount of flags around a cell as the number, the location of all green sqaures around will be added to a list witch will be left clicked.
 
 ## Sudoku
- In the code you will find a variable called "regel" this variable needs a string of 81 numbers, make the string starting at the top left corner of the sudoku going left until the end of the row, rown a row. If a cell does not have a value write it as down a "0".
+ When the code is run a window will be made with a 9x9 grid filled with cells, each cell has 9 buttons one for each possible number. When one of the buttons is clicked the buttons will disappear and the number will fill the cell. The button of that number will be removed from the other cells in that row, column and square. 
+ 
+ When there is only one number left in the cell the cell will be assigned that number so you should never see a single number in a cell. 
+ A cell will alse be assigned a number when it is the only cell in a row, column or square that can have that can still be assigned that number.
 
  The code will return a filled in version of the sudoku, it will be printed in the terminal.
