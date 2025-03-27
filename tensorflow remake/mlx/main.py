@@ -5,11 +5,11 @@ import time
 
 def large(ap=0):
     model = Sequential()
-    model.add(Dense(2**(6+ap), 2**(6+ap)))
-    model.add(Dense(2**(5+ap), 2**(6+ap)))
-    model.add(Dense(2**(4+ap), 2**(5+ap)))
-    model.add(Dense(2**(3+ap), 2**(4+ap)))
-    model.add(Dense(2**(2+ap), 2**(3+ap)))
+    model.add(Dense(2**(6+ap), 2**(6+ap),learning_rate=model.learning_rate))
+    model.add(Dense(2**(5+ap), 2**(6+ap),learning_rate=model.learning_rate))
+    model.add(Dense(2**(4+ap), 2**(5+ap),learning_rate=model.learning_rate))
+    model.add(Dense(2**(3+ap), 2**(4+ap),learning_rate=model.learning_rate))
+    model.add(Dense(2**(2+ap), 2**(3+ap),learning_rate=model.learning_rate))
     model.add(Dense(2**(1+ap), 2**(2+ap), activation='softmax'))
 
     start = time.time()
@@ -19,7 +19,7 @@ def large(ap=0):
 
 def and_nn():
     and_nn = Sequential(1)
-    and_nn.add(Dense(1,2))
+    and_nn.add(Dense(1,2,learning_rate=and_nn.learning_rate))
     and_nn.layers[0].weights = mx.array([-.5, .5])
     and_nn.layers[0].biases = mx.array([1.5])
 
@@ -31,8 +31,8 @@ def and_nn():
 
 def xor():
     xor_nn = Sequential(1)
-    xor_nn.add(Dense(2, 2))
-    xor_nn.add(Dense(1, 2))
+    xor_nn.add(Dense(2, 2, learning_rate=xor_nn.learning_rate))
+    xor_nn.add(Dense(1, 2, learning_rate=xor_nn.learning_rate))
 
     # Initialize weights and biases
     xor_nn.layers[0].weights = mx.array([[0.2, -0.4], [0.7, 0.1]])
@@ -50,8 +50,8 @@ def xor():
 
 def adder():
     adder_nn = Sequential(1)
-    adder_nn.add(Dense(3, 2))  # Hidden layer with 3 neurons
-    adder_nn.add(Dense(2, 3))  # Output layer with 2 neurons
+    adder_nn.add(Dense(3, 2, learning_rate=adder_nn.learning_rate))  # Hidden layer with 3 neurons
+    adder_nn.add(Dense(2, 3, learning_rate=adder_nn.learning_rate))  # Output layer with 2 neurons
 
     # Initialize weights and biases
     adder_nn.layers[0].weights = mx.array([[0.0, 0.1], [0.2, 0.3], [0.4, 0.5]])
@@ -68,11 +68,11 @@ def adder():
 
 
 if __name__ == '__main__':
-    times = []
-    for ap in range(10):
-        times.append(sum([large(ap) for _ in range(10)])/10)
-        print(f'ap: {ap} Done')
-    print(times)
+    # times = []
+    # for ap in range(10):
+    #     times.append(sum([large(ap) for _ in range(10)])/10)
+    #     print(f'ap: {ap} Done')
+    # print(times)
     and_nn()
     xor()
     adder()

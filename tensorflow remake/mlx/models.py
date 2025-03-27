@@ -21,7 +21,7 @@ class Model:
     def backwards(self, input: mx.array, target: mx.array):
         raise NotImplementedError
     
-    def update(self, deltaW: list[mx.array], deltaB: list[mx.array]):
+    def update(self):
         raise NotImplementedError
     
     def train(self, inputs: mx.array, targets: mx.array, epoch: int, validation: tuple[mx.array, mx.array]):
@@ -54,22 +54,31 @@ class Sequential(Model):
     def backwards(self, input: mx.array, target: mx.array):
         self.forward(input)
 
+        # dz = [self.layers[-1].error(target)]
+        # dw = [self.learning_rate * mx.reshape(dz[0], shape=(-1,1)) * mx.reshape(input.T if len(self.layers) == 1 else self.layers[-2].last_output.T, shape=(-1,1)).T]
+        # db = [self.learning_rate * dz[0]]
+
+        # for i in range(len(self.layers)-1):
+        #     dz.append(self.layers[-2-i].derivative(self.layers[-2-i].last_output) * mx.matmul(self.layers[-1-i].weights.T, dz[i]))
+        #     dw.append(self.learning_rate * mx.matmul(mx.reshape(dz[1+i], (-1,1)), mx.reshape((self.layers[-3-i].last_output if abs(-3-i) < len(self.layers) else input), (-1,1)).T))
+        #     db.append(self.learning_rate * dz[1+i])
+
+        # dw.reverse()
+        # db.reverse()
+        # self.update(dw, db)
+
         dz = [self.layers[-1].error(target)]
-        dw = [self.learning_rate * mx.reshape(dz[0], shape=(-1,1)) * mx.reshape(input.T if len(self.layers) == 1 else self.layers[-2].last_output.T, shape=(-1,1)).T]
-        db = [self.learning_rate * dz[0]]
+        self.layers[-1].backwards(dz[0])
 
         for i in range(len(self.layers)-1):
             dz.append(self.layers[-2-i].derivative(self.layers[-2-i].last_output) * mx.matmul(self.layers[-1-i].weights.T, dz[i]))
-            dw.append(self.learning_rate * mx.matmul(mx.reshape(dz[1+i], (-1,1)), mx.reshape((self.layers[-3-i].last_output if abs(-3-i) < len(self.layers) else input), (-1,1)).T))
-            db.append(self.learning_rate * dz[1+i])
+            self.layers[-2-i].backwards(dz[1+i])
 
-        dw.reverse()
-        db.reverse()
-        self.update(dw, db)
+        self.update()
 
-    def update(self, deltaW: list[mx.array], deltaB: list[mx.array]):
+    def update(self):
         for i, layer in enumerate(self.layers):
-            layer.update(deltaW=deltaW[i], deltaB=deltaB[i])
+            layer.update()
 
     def train(self, inputs: mx.array, targets: mx.array, epoch: int, validation: tuple[mx.array, mx.array] | None = None):
         for _ in range(epoch):
