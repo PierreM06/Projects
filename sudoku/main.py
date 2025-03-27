@@ -1,7 +1,7 @@
 from collections import Counter
 import customtkinter as tk
 
-class cell():
+class Cell:
     def __init__(self, number) -> None:
         self.number = number
         self.value = None
@@ -20,10 +20,9 @@ class cell():
         if waarde in self.possible:
             self.possible.remove(waarde)
             self.update_label()
-            if len(self.possible) == 1:
-                self.clicked(self.possible[0])
-        else:
-            return
+        if len(self.possible) == 1:
+            self.clicked(self.possible[0])
+        return
 
     def sett(self, waarde) -> None:
         self.value = waarde
@@ -35,6 +34,10 @@ class cell():
         rows[int(self.number//9)].update_cells(self.value)
         columns[int(self.number%9)].update_cells(self.value)
         squares[int((self.number//27*3))+int(self.number%9/3)].update_cells(self.value)
+
+        rows[int(self.number//9)].group()
+        columns[int(self.number%9)].group()
+        squares[int((self.number//27*3))+int(self.number%9/3)].group()
 
     def clicked(self, waarde):
         self.frame.destroy()
@@ -58,8 +61,8 @@ class cell():
         pass
 
 
-class group():
-    def __init__(self, cells: list[cell]) -> None:
+class Group:
+    def __init__(self, cells: list[Cell]) -> None:
         self.containing = cells
         pass
 
@@ -88,7 +91,7 @@ root = tk.CTk()
 root.geometry("555x610")
 root.resizable(False, False)
     
-cells = [cell(i) for i in range(9*9)]
+cells = [Cell(i) for i in range(9*9)]
 
 v_line1 = tk.CTkLabel(root, text="", width=2, height=610, fg_color="#FFFFFF")
 v_line2 = tk.CTkLabel(root, text="", width=2, height=610, fg_color="#FFFFFF")
@@ -102,11 +105,11 @@ v_line2.place(x=371, y=0)
 h_line1.place(x=0, y=202)
 h_line2.place(x=0, y=406)
 
-rows = [group([cells[i+j*9] for i in range(9)]) for j in range(9)]
+rows = [Group([cells[i+j*9] for i in range(9)]) for j in range(9)]
 
-columns = [group([cells[i*9+j] for i in range(9)]) for j in range(9)]
+columns = [Group([cells[i*9+j] for i in range(9)]) for j in range(9)]
 
-squares = [group([cells[i%3+(i//3*9)+(j%3)*3+(j//3)*27] for i in range(9)]) for j in range(9)]
+squares = [Group([cells[i%3+(i//3*9)+(j%3)*3+(j//3)*27] for i in range(9)]) for j in range(9)]
 
 # regel = "200507406000031000000000230000020000860310000045000000009000700006950002001006008"
 # print(len(regel))

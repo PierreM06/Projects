@@ -1,25 +1,23 @@
 import pyautogui
 import time
-from icecream import ic
-
+from PIL import Image
+import random
 
 # Define colors for the squares and numbers
 square_colors = {
-    ((155, 195, 90), (200, 225, 140)): "🟩",
-    ((190, 70, 35), (225, 145, 65)): "❌",
-    ((210, 185, 157), (223, 195, 163)): "⬜️",
-    ((50, 110, 195), (100, 150, 205)): " 1",
-    ((100, 145, 85), (180, 180, 135)): " 2",
-    ((195, 70, 60), (210, 160, 125)): " 3",
-    ((120, 50, 155), (125, 60, 160)): " 4",
-    ((210, 160, 85), (236, 190, 150)): " 5",
-    ((90, 150, 160), (100, 165, 170)): " 6"
+    ((254, 254, 254), (255, 255, 255)): '🟩',
+    ((189, 189, 189), (190, 190, 190)): '⬜️',
+    ((189, 68, 64), (189, 69, 64)): '❌',
+    ((0, 0, 254), (1, 1, 255)): ' 1',
+    ((199, 192, 200), (199, 192, 200)): ' 2',
+    ((185, 201, 201), (185, 201, 201)): ' 3',
+    ((128, 0, 128), (128, 0, 128)): ' 4'
+
 }
 
 # Function to capture the Minesweeper board from a screenshot with a delay
-def capture_board_with_delay(start_x, start_y, width, height, num_cells_x, num_cells_y, delay):
+def capture_board_with_delay(start_x, start_y, width, height, num_cells_x, num_cells_y):
     print("Move your mouse to the Minesweeper board...")
-    time.sleep(delay)
     screenshot = pyautogui.screenshot(region=(start_x, start_y, width, height))
     screenshot.save("board.png")
     cell_width = width // num_cells_x
@@ -27,7 +25,7 @@ def capture_board_with_delay(start_x, start_y, width, height, num_cells_x, num_c
     return screenshot, cell_width, cell_height
 
 # Function to identify cells and their status
-def identify_cells(board, cell_width, cell_height, num_cells_x, num_cells_y, start_x, start_y):
+def identify_cells(board, cell_width, cell_height, num_cells_x, num_cells_y):
     # Convert the PIL Image to RGB mode
     board = board.convert('RGB')
     pixels = board.load()
@@ -52,7 +50,7 @@ def identify_cells(board, cell_width, cell_height, num_cells_x, num_cells_y, sta
             if status is None:
                 status = pixel_color
                 # print(f"{status}-({x},{y}).png")
-                # board.save(f"{status}-({x},{y}).png")
+                # board.save(f"wrong/{status}-({x},{y}).png")
             row.append(status)
         cell_status.append(row)
 
@@ -87,6 +85,9 @@ def check_neighbors(board, x, y, number):
         return greens, []
     return [], []
 
+def green_magic(board):
+    return
+
 # Define a function to make a move
 def make_move(board):
     right_clicks, left_clicks = [], []
@@ -108,43 +109,49 @@ def make_move(board):
     for i in left_clicks:
         if i not in l and i != []:
             l.append(i)
+
+    if r == [] and l == []:
+        green_magic(board)
     return r, l
 
 # Main function
 def main():
-    # Define the coordinates and dimensions for capturing the Minesweeper board from the screenshot
-    start_x = 615
-    start_y = 415
-    width = 450
-    height = 360
-    num_cells_x = 10  # Number of cells on the x-axis
-    num_cells_y = 8   # Number of cells on the y-axis
+    start_x = 15
+    start_y = 181
 
-    start_x = 570
-    start_y = 385
-    width = 540
-    height = 420
-    num_cells_x = 18
-    num_cells_y = 14
+    # easy minesweeper spel
+    width = 270
+    height = 270
+    num_cells_x = 9
+    num_cells_y = 9
 
-    start_x = 540
-    start_y = 345
-    width = 600
-    height = 500
-    num_cells_x = 24
-    num_cells_y = 20
+    # medium minesweeper spel
+    # width = 480
+    # height = 480
+    # num_cells_x = 16
+    # num_cells_y = 16
 
-    delay = 1  # 5 seconds delay (adjust as needed)
+    # # groot minesweeper spel
+    # width = 600
+    # height = 500
+    # num_cells_x = 24
+    # num_cells_y = 20
+
+    time.sleep(1)
+    pyautogui.click(random.randint(start_x, start_x+width), random.randint(start_y, start_y + height))
+    time.sleep(1)
 
     # Capture the Minesweeper board from the screenshot with a delay
-    captured_board, cell_width, cell_height = capture_board_with_delay(start_x, start_y, width, height, num_cells_x, num_cells_y, delay)
+    captured_board, cell_width, cell_height = capture_board_with_delay(start_x, start_y, width, height, num_cells_x, num_cells_y)
 
     while True:
         # Identify cells and their status
-        board_with_cells = identify_cells(captured_board, cell_width, cell_height, num_cells_x, num_cells_y, start_x, start_y)
+        board_with_cells = identify_cells(captured_board, cell_width, cell_height, num_cells_x, num_cells_y)
         for row in board_with_cells:
             print(*row, sep="")
         print()
+
+        break
 
         # Make a move
         right, left = make_move(board_with_cells)
@@ -155,7 +162,8 @@ def main():
         for y,x in left:
             pyautogui.click(start_x + x * cell_width + cell_width // 2, start_y + y * cell_height + cell_height // 2)
 
-        time.sleep(.11)
+        pyautogui.moveTo(200, 200)
+        # time.sleep(.2)
         # Take another screenshot
         captured_board = pyautogui.screenshot(region=(start_x, start_y, width, height))
 
@@ -166,3 +174,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
