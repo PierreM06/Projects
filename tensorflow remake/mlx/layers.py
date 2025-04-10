@@ -1,85 +1,67 @@
-from activation import activations
 from typing import Callable
+from tensor import Tensor
 import mlx.core as mx
 
 
 class Layer:
     def __init__(self) -> None:
-        self.weights: mx.array = None #type: ignore
-        self.biases: mx.array = None #type: ignore
+        self.weights: Tensor = None #type: ignore
+        self.biases: Tensor = None #type: ignore
 
-        self.activation: Callable[[mx.array], mx.array] = None #type: ignore
-        self.derivative: Callable[[mx.array], mx.array] = None #type: ignore
-        self.last_input: mx.array = None #type: ignore
-        self.last_output: mx.array = None #type: ignore
+        self.last_input: Tensor = None #type: ignore
+        self.last_output: Tensor = None #type: ignore
 
-        self.dw: mx.array = None #type: ignore
-        self.db: mx.array = None #type: ignore
+        self.learning_rate: float = None #type: ignore
 
-    def output(self, input: mx.array) -> mx.array:
+        self.dw: Tensor = None #type: ignore
+        self.db: Tensor = None #type: ignore
+
+    def output(self, input: Tensor) -> Tensor:
         raise NotImplementedError
     
-    def error(self, target: mx.array) -> mx.array:
-        raise NotImplementedError
-    
-    def backwards(self, gradient: mx.array):
+    def backwards(self, gradient: Tensor):
         raise NotImplementedError
     
     def update(self):
+        raise NotImplementedError
+    
+    def parameters(self):
         raise NotImplementedError
 
 
 class Dense(Layer):
     def __init__(self, neurons:int, input_size: int, activation: str='sigmoid', learning_rate: float=0.01) -> None:
         super().__init__()
-        self.weights = mx.random.normal((neurons, input_size,))
-        self.biases = mx.random.normal((neurons,))
+        self.weights = Tensor(mx.random.normal((neurons, input_size,)), requires_grad=True)
+        self.biases = Tensor(mx.random.normal((neurons,)), requires_grad=True)
 
-        self.activation_name = activation
-        self.activation = activations[activation]
-        self.derivative = activations[f'{activation}_derivative']
-        self.learning_rate = learning_rate
+        self.activation = activation
 
         self.dw = None #type: ignore
         self.db = None #type: ignore
 
-    def weighted_sum(self, input: mx.array) -> mx.array:
-        return mx.matmul(self.weights, mx.reshape(input, (-1,1))).squeeze() + self.biases
+    def calculate_weighted_sum(self, input: Tensor) -> Tensor:
+        return (self.weights @ input) + self.biases
     
-    def output(self, input: mx.array) -> mx.array:
+    def output(self, input: Tensor) -> Tensor:
         self.last_input = input
-        self.last_output = mx.array(self.activation(self.weighted_sum(input=input)))
+        self.weighted_sum = self.calculate_weighted_sum(input=input)
+        self.last_output = self.weighted_sum.apply(self.activation)
         return self.last_output
     
-    def backwards(self, gradient: mx.array):
-        # grad_input = mx.matmul(self.weights.T, gradient)  # Backpropagated error
-        grad_weights = mx.matmul(mx.reshape(gradient, shape=(-1,1)), mx.reshape(self.last_input, shape=(-1,1)).T)
-        grad_biases = gradient
+    def backwards(self, gradient: Tensor) -> None:
+        # # grad_input = mx.matmul(self.weights.T, gradient)  # Backpropagated error
+        # grad_weights = mx.matmul(mx.reshape(gradient, shape=(-1,1)), mx.reshape(self.last_input, shape=(-1,1)).T)
+        # grad_biases = gradient
 
-        # Update weights and biases
-        self.dw = self.learning_rate * grad_weights
-        self.db = self.learning_rate * grad_biases
+        # # Update weights and biases
+        # self.dw = grad_weights * self.learning_rate
+        # self.db = grad_biases * self.learning_rate
+        pass
     
     def update(self):
         self.weights -= self.dw
         self.biases -= self.db
 
-    def error(self, target: mx.array) -> mx.array:
-        return self.last_output * (1 - self.last_output) * -(target - self.last_output)
-    
-
-class HelperLayer(Layer):
-    def __init__(self) -> None:
-        pass
-
-    def output(self, input: mx.array) -> mx.array:
-        raise NotImplementedError
-    
-    def error(self, target: mx.array) -> mx.array:
-        raise NotImplementedError
-
-
-class Flatten(HelperLayer):
-    def __init__(self) -> None:
-        super().__init__()
-
+    def parameters(self) -> list[Tensor]:
+        return [self.weights, self.biases]

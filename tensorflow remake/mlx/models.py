@@ -1,4 +1,5 @@
-from layers import Layer, HelperLayer
+from layers import Layer
+from tensor import Tensor
 import mlx.core as mx
 
 
@@ -9,22 +10,22 @@ class Model:
     def add(self, layer: Layer):
         raise NotImplementedError
     
-    def forward(self, input: mx.array):
+    def forward(self, input: Tensor):
         raise NotImplementedError
     
-    def output(self, input: mx.array) -> mx.array:
+    def output(self, input: Tensor) -> Tensor:
         raise NotImplementedError
     
-    def outputs(self, inputs: mx.array) -> mx.array:
+    def outputs(self, inputs: Tensor) -> Tensor:
         raise NotImplementedError
     
-    def backwards(self, input: mx.array, target: mx.array):
+    def backwards(self, input: Tensor, target: Tensor):
         raise NotImplementedError
     
     def update(self):
         raise NotImplementedError
     
-    def train(self, inputs: mx.array, targets: mx.array, epoch: int, validation: tuple[mx.array, mx.array]):
+    def train(self, inputs: Tensor, targets: Tensor, epoch: int, validation: tuple[Tensor, Tensor]):
         raise NotImplementedError
     
     def __str__(self) -> str:
@@ -40,39 +41,26 @@ class Sequential(Model):
     def add(self, layer: Layer):
         self.layers.append(layer)
 
-    def forward(self, input: mx.array):
+    def forward(self, input: Tensor):
         for i, layer in enumerate(self.layers):
-            layer.output(input if i == 0 else self.layers[i-1].last_output)
+            input = layer.output(input)
     
-    def output(self, input: mx.array) -> mx.array:
+    def output(self, input: Tensor) -> Tensor:
         self.forward(input=input)
         return self.layers[-1].last_output
     
-    def outputs(self, inputs: mx.array) -> mx.array:
-        return mx.array([self.output(input) for input in inputs])
+    def outputs(self, inputs: Tensor) -> Tensor:
+        return Tensor([self.output(input) for input in inputs])
     
-    def backwards(self, input: mx.array, target: mx.array):
+    def backwards(self, input: Tensor, target: Tensor):
         self.forward(input)
 
-        # dz = [self.layers[-1].error(target)]
-        # dw = [self.learning_rate * mx.reshape(dz[0], shape=(-1,1)) * mx.reshape(input.T if len(self.layers) == 1 else self.layers[-2].last_output.T, shape=(-1,1)).T]
-        # db = [self.learning_rate * dz[0]]
+        # dz = [self.layers[-1].weights.backward(target)]
+        # self.layers[-1].backwards(dz[0])
 
         # for i in range(len(self.layers)-1):
-        #     dz.append(self.layers[-2-i].derivative(self.layers[-2-i].last_output) * mx.matmul(self.layers[-1-i].weights.T, dz[i]))
-        #     dw.append(self.learning_rate * mx.matmul(mx.reshape(dz[1+i], (-1,1)), mx.reshape((self.layers[-3-i].last_output if abs(-3-i) < len(self.layers) else input), (-1,1)).T))
-        #     db.append(self.learning_rate * dz[1+i])
-
-        # dw.reverse()
-        # db.reverse()
-        # self.update(dw, db)
-
-        dz = [self.layers[-1].error(target)]
-        self.layers[-1].backwards(dz[0])
-
-        for i in range(len(self.layers)-1):
-            dz.append(self.layers[-2-i].derivative(self.layers[-2-i].last_output) * mx.matmul(self.layers[-1-i].weights.T, dz[i]))
-            self.layers[-2-i].backwards(dz[1+i])
+        #     dz.append(self.layers[-2-i].derivative(self.layers[-2-i].last_output) * mx.matmul(self.layers[-1-i].weights.T(), dz[i]))
+        #     self.layers[-2-i].backwards(dz[1+i])
 
         self.update()
 
@@ -80,10 +68,21 @@ class Sequential(Model):
         for i, layer in enumerate(self.layers):
             layer.update()
 
-    def train(self, inputs: mx.array, targets: mx.array, epoch: int, validation: tuple[mx.array, mx.array] | None = None):
-        for _ in range(epoch):
-            for i in range(len(inputs)):
-                self.backwards(inputs[i], targets[i])
+    def train(self, inputs: Tensor, targets: Tensor, epoch: int, validation: tuple[Tensor, Tensor] | None = None):
+        # for _ in range(epoch):
+        #     for i in range(len(inputs)):
+        #         self.backwards(inputs[i], targets[i])
+        pass
+
+    def parameters(self) -> list[Tensor]:
+        params: list[Tensor] = []
+        for layer in self.layers:
+            params.extend(layer.parameters())
+        return params
+    
+    def zero_grad(self):
+        for p in self.parameters():
+            p.zero_grad()
     
     def __str__(self) -> str:
         return super().__str__()
