@@ -89,6 +89,18 @@ def test_exp_forward():
     c = a.exp()
     assert c.data.item() == pytest.approx(mx.exp(mx.array([1.0])).item())
 
+def test_log_forward():
+    t = Tensor(mx.array([1.0, 10.0, 100.0]), requires_grad=False)
+    log_t = t.log()
+    expected = mx.log(t.data) / mx.log(mx.array(10))
+    assert mx.allclose(log_t.data, expected)
+
+def test_log_natural_forward():
+    t = Tensor(mx.array([1.0, mx.e, mx.e**2]), requires_grad=False)
+    log_t = t.log(base=mx.e)
+    expected = mx.log(t.data)
+    assert mx.allclose(log_t.data, expected)
+
 def test_reshape_forward():
     a = Tensor([[1.0, 2.0], [3.0, 4.0]])
     c = a.reshape(4)
@@ -227,6 +239,20 @@ def test_exp_backward():
     c = a.exp()
     c.backward()
     assert a.grad.item() == pytest.approx(mx.exp(mx.array([1.0])).item())
+
+def test_log_backward():
+    t = Tensor(mx.array([1.0, 10.0, 100.0]), requires_grad=True)
+    out = t.log()
+    out.backward(mx.array([1.0, 1.0, 1.0]))
+    expected_grad = 1 / (t.data * mx.log(mx.array(10)))
+    assert mx.allclose(t.grad, expected_grad)
+
+def test_log_natural_backward():
+    t = Tensor(mx.array([1.0, mx.e, mx.e**2]), requires_grad=True)
+    out = t.log(base=mx.e)
+    out.backward(mx.ones_like(t.data))
+    expected_grad = 1 / t.data
+    assert mx.allclose(t.grad, expected_grad)
 
 def test_reshape_backward():
     a = Tensor([[1.0, 2.0], [3.0, 4.0]], requires_grad=True)

@@ -188,6 +188,17 @@ class Tensor:
         result._op = 'exp'
         return result
     
+    def log(self, base: float = 10.0):
+        if base == mx.e:
+            data = mx.log(self.data)
+        else:
+            data = mx.log(self.data) / mx.log(mx.array(base))
+
+        result = Tensor(data, requires_grad=self.requires_grad)
+        result._parents = [self]
+        result._op = f"log,{base}"
+        return result
+    
     def backward(self, grad=None):
         if not self.requires_grad:
             return
@@ -227,6 +238,13 @@ class Tensor:
                     parent.backward(grad * (1 - mx.tanh(parent.data)**2))
                 elif self._op == 'exp':
                     parent.backward(grad * self.data)
+                elif self._op and self._op.startswith("log"):
+                    base = float(self._op.split(',')[1])
+                    x = self._parents[0]
+                    if base == mx.e:
+                        x.backward(self.grad / x.data)
+                    else:
+                        x.backward(self.grad / (x.data * mx.log(mx.array(base))))
                 elif self._op == 'reshape':
                     parent.backward(grad.reshape(parent.data.shape))
                 elif self._op == 'transpose':
