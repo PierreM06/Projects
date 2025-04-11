@@ -8,6 +8,7 @@ class Tensor:
         self._parents: list[Tensor] = []  # Track dependencies for computation graph
         self._op: str = None  #type: ignore Operation that created this tensor
         self._idx: int = None  #type:ignore
+        self._extra: str = None  #type:ignore
 
     def __repr__(self):
         return f"Tensor(data={self.data}, requires_grad={self.requires_grad})"
@@ -18,6 +19,10 @@ class Tensor:
     @property
     def shape(self):
         return self.data.shape
+    
+    @property
+    def is_batched(self):
+        return self.data.ndim > 1  # assumes first dim is batch
     
     def apply(self, method: str):
         """
@@ -93,6 +98,12 @@ class Tensor:
         result._op = 'sub'
         return result
     
+    def __neg__(self):
+        result = Tensor(self.data * -1, requires_grad=self.requires_grad)
+        result._parents = [self]
+        result._op = 'neg'
+        return result
+    
     def __mul__(self, other):
         if not isinstance(other, Tensor):
             other = Tensor(other)
@@ -129,10 +140,14 @@ class Tensor:
         result._op = 'matmul'
         return result
 
-    def sum(self):
-        result = Tensor(self.data.sum(), requires_grad=self.requires_grad)
-        result._parents = [self]
-        result._op = 'sum'
+    def sum(self, axis=None, keepdims=False):
+        # Reduce across all feature dims if no axis given
+        if axis is None:
+            axis = tuple(range(1, self.data.ndim)) if self.is_batched else None
+        data = mx.sum(self.data, axis=axis, keepdims=keepdims)
+        result = Tensor(data, requires_grad=self.requires_grad)
+        result._parents=[self]
+        result._op="sum"
         return result
     
     def mean(self):
@@ -167,8 +182,14 @@ class Tensor:
         exps = shifted.exp()           # Tensor
         summed = exps.sum()            # Scalar Tensor
         result = exps / summed         # Tensor
+        result._extra = 'softmax'
 
         return result
+    
+    def step(self):
+        out = Tensor((self.data > 0).astype(self.data.dtype), requires_grad=self.requires_grad)
+        out._parents = [self]
+        out._op = 'step'
     
     def reshape(self, *shape):
         result = Tensor(self.data.reshape(*shape), requires_grad=self.requires_grad)
@@ -195,8 +216,8 @@ class Tensor:
             data = mx.log(self.data) / mx.log(mx.array(base))
 
         result = Tensor(data, requires_grad=self.requires_grad)
-        result._parents = [self]
-        result._op = f"log,{base}"
+        result._parents = [self, Tensor(base)]
+        result._op = "log"
         return result
     
     def backward(self, grad=None):
@@ -217,6 +238,8 @@ class Tensor:
                     parent.backward(grad)  # d(a+b)/da = 1, d(a+b)/db = 1
                 elif self._op == 'sub':
                     parent.backward(grad if parent is self._parents[0] else -grad)  # d(a-b)/da = 1, d(a-b)/db = -1
+                elif self._op == 'neg':
+                    parent.backward(-grad)
                 elif self._op == 'mul':
                     parent.backward(grad * (self._parents[1].data if parent is self._parents[0] else self._parents[0].data))  # d(a*b)/da = b, d(a*b)/db = a
                 elif self._op == 'div':
@@ -236,15 +259,16 @@ class Tensor:
                     parent.backward(grad * sigmoid_val * (1 - sigmoid_val))
                 elif self._op == 'tanh':
                     parent.backward(grad * (1 - mx.tanh(parent.data)**2))
+                elif self._op == 'step':
+                    parent.backward(mx.zeros_like(self.data))
                 elif self._op == 'exp':
                     parent.backward(grad * self.data)
-                elif self._op and self._op.startswith("log"):
-                    base = float(self._op.split(',')[1])
-                    x = self._parents[0]
+                elif self._op == 'log':
+                    base = self._parents[1]
                     if base == mx.e:
-                        x.backward(self.grad / x.data)
+                        parent.backward(self.grad / parent.data)
                     else:
-                        x.backward(self.grad / (x.data * mx.log(mx.array(base))))
+                        parent.backward(self.grad / (parent.data * mx.log(mx.array(base.data))))
                 elif self._op == 'reshape':
                     parent.backward(grad.reshape(parent.data.shape))
                 elif self._op == 'transpose':
