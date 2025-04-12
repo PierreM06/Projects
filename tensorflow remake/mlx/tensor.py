@@ -1,5 +1,17 @@
 import mlx.core as mx
 
+def batch_aware_reduction(fn):
+    def wrapped(self, axis=None, keepdims=False):
+        if axis is None:
+            if self.data.ndim <= 1:
+                axis = None  # scalar or no batch
+            else:
+                axis = tuple(range(1, self.data.ndim))  # exclude batch dim
+
+        return fn(self, axis=axis, keepdims=keepdims)
+    return wrapped
+
+
 class Tensor:
     def __init__(self, data, requires_grad=False):
         self.data: mx.array = mx.array(data)  # Store the MLX array
@@ -19,10 +31,6 @@ class Tensor:
     @property
     def shape(self):
         return self.data.shape
-    
-    @property
-    def is_batched(self):
-        return self.data.ndim > 1  # assumes first dim is batch
     
     def apply(self, method: str):
         """
@@ -74,11 +82,19 @@ class Tensor:
         
         return result
 
-    def max(self):
-        return Tensor(mx.max(self.data), requires_grad=False)
-
-    def min(self):
-        return Tensor(mx.min(self.data), requires_grad=False)
+    @batch_aware_reduction
+    def max(self, axis=None, keepdims=False):
+        result = Tensor(mx.max(self.data, axis=axis, keepdims=keepdims), requires_grad=False)
+        result._parents = [self]
+        result._op = 'max'
+        return result
+    
+    @batch_aware_reduction
+    def min(self, axis=None, keepdims=False):
+        result = Tensor(mx.min(self.data, axis=axis, keepdims=keepdims), requires_grad=False)
+        result._parents = [self]
+        result._op = 'min'
+        return result
 
     def __add__(self, other):
         if not isinstance(other, Tensor):
@@ -139,19 +155,17 @@ class Tensor:
         result._parents = [self, other]
         result._op = 'matmul'
         return result
-
+    
+    @batch_aware_reduction
     def sum(self, axis=None, keepdims=False):
-        # Reduce across all feature dims if no axis given
-        if axis is None:
-            axis = tuple(range(1, self.data.ndim)) if self.is_batched else None
-        data = mx.sum(self.data, axis=axis, keepdims=keepdims)
-        result = Tensor(data, requires_grad=self.requires_grad)
-        result._parents=[self]
-        result._op="sum"
+        result = Tensor(mx.sum(self.data, axis=axis, keepdims=keepdims), requires_grad=self.requires_grad)
+        result._parents = [self]
+        result._op = 'sum'
         return result
     
-    def mean(self):
-        result = Tensor(self.data.mean(), requires_grad=self.requires_grad)
+    @batch_aware_reduction
+    def mean(self, axis=None, keepdims=False):
+        result = Tensor(mx.mean(self.data, axis=axis, keepdims=keepdims), requires_grad=self.requires_grad)
         result._parents = [self]
         result._op = 'mean'
         return result
@@ -175,32 +189,12 @@ class Tensor:
         return result
     
     def softmax(self):
-        if self.data.ndim != 1:
-            raise ValueError("softmax() is only supported on 1D tensors. Use apply('softmax') for batched tensors.")
-
         shifted = self - self.max()     # Tensor
         exps = shifted.exp()           # Tensor
         summed = exps.sum()            # Scalar Tensor
         result = exps / summed         # Tensor
         result._extra = 'softmax'
 
-        return result
-    
-    def step(self):
-        out = Tensor((self.data > 0).astype(self.data.dtype), requires_grad=self.requires_grad)
-        out._parents = [self]
-        out._op = 'step'
-    
-    def reshape(self, *shape):
-        result = Tensor(self.data.reshape(*shape), requires_grad=self.requires_grad)
-        result._parents = [self]
-        result._op = 'reshape'
-        return result
-    
-    def T(self):
-        result = Tensor(self.data.T, requires_grad=self.requires_grad)
-        result._parents = [self]
-        result._op = 'transpose'
         return result
     
     def exp(self):
@@ -218,6 +212,23 @@ class Tensor:
         result = Tensor(data, requires_grad=self.requires_grad)
         result._parents = [self, Tensor(base)]
         result._op = "log"
+        return result
+    
+    def step(self):
+        out = Tensor((self.data > 0).astype(self.data.dtype), requires_grad=self.requires_grad)
+        out._parents = [self]
+        out._op = 'step'
+    
+    def reshape(self, *shape):
+        result = Tensor(self.data.reshape(*shape), requires_grad=self.requires_grad)
+        result._parents = [self]
+        result._op = 'reshape'
+        return result
+    
+    def T(self):
+        result = Tensor(self.data.T, requires_grad=self.requires_grad)
+        result._parents = [self]
+        result._op = 'transpose'
         return result
     
     def backward(self, grad=None):
