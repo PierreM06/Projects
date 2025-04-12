@@ -1,11 +1,12 @@
 from models import Sequential
 from layers import Dense
 from tensor import Tensor
+from losses import MSELoss
 import mlx.core as mx
 import time
 
 def large(ap=0):
-    model = Sequential()
+    model = Sequential(MSELoss())
     model.add(Dense(2**(6+ap), 2**(6+ap),learning_rate=model.learning_rate))
     model.add(Dense(2**(5+ap), 2**(6+ap),learning_rate=model.learning_rate))
     model.add(Dense(2**(4+ap), 2**(5+ap),learning_rate=model.learning_rate))
@@ -19,10 +20,10 @@ def large(ap=0):
     return time.time() - start
 
 def and_nn():
-    and_nn = Sequential(1)
+    and_nn = Sequential(MSELoss(), 1)
     and_nn.add(Dense(1,2,learning_rate=and_nn.learning_rate))
-    and_nn.layers[0].weights = Tensor(mx.array([-.5, .5]))
-    and_nn.layers[0].biases = Tensor(mx.array([1.5]))
+    and_nn.layers[0].weights = Tensor(mx.array([-.5, .5]), requires_grad=True)
+    and_nn.layers[0].biases = Tensor(mx.array([1.5]), requires_grad=True)
 
     and_in = Tensor(mx.array([[0,0],[1,0],[0,1],[1,1]]))
     and_t = Tensor(mx.array([[0],[0],[0],[1]]))
@@ -33,7 +34,7 @@ def and_nn():
     print(and_nn.layers[0].weights, and_nn.layers[0].biases)
 
 def xor():
-    xor_nn = Sequential(1)
+    xor_nn = Sequential(MSELoss(), 1)
     xor_nn.add(Dense(2, 2, learning_rate=xor_nn.learning_rate))
     xor_nn.add(Dense(1, 2, learning_rate=xor_nn.learning_rate))
 
@@ -53,7 +54,7 @@ def xor():
     print(xor_nn.layers[0].weights, xor_nn.layers[0].biases)
 
 def adder():
-    adder_nn = Sequential(1)
+    adder_nn = Sequential(MSELoss(), 1)
     adder_nn.add(Dense(3, 2, learning_rate=adder_nn.learning_rate))  # Hidden layer with 3 neurons
     adder_nn.add(Dense(2, 3, learning_rate=adder_nn.learning_rate))  # Output layer with 2 neurons
 

@@ -13,13 +13,7 @@ class Layer:
 
         self.learning_rate: float = None #type: ignore
 
-        self.dw: Tensor = None #type: ignore
-        self.db: Tensor = None #type: ignore
-
     def output(self, input: Tensor) -> Tensor:
-        raise NotImplementedError
-    
-    def backwards(self, gradient: Tensor):
         raise NotImplementedError
     
     def update(self):
@@ -37,9 +31,6 @@ class Dense(Layer):
 
         self.activation = activation
 
-        self.dw = None #type: ignore
-        self.db = None #type: ignore
-
     def calculate_weighted_sum(self, input: Tensor) -> Tensor:
         return (self.weights @ input) + self.biases
     
@@ -49,19 +40,9 @@ class Dense(Layer):
         self.last_output = self.weighted_sum.apply(self.activation)
         return self.last_output
     
-    def backwards(self, gradient: Tensor) -> None:
-        # # grad_input = mx.matmul(self.weights.T, gradient)  # Backpropagated error
-        # grad_weights = mx.matmul(mx.reshape(gradient, shape=(-1,1)), mx.reshape(self.last_input, shape=(-1,1)).T)
-        # grad_biases = gradient
-
-        # # Update weights and biases
-        # self.dw = grad_weights * self.learning_rate
-        # self.db = grad_biases * self.learning_rate
-        pass
-    
     def update(self):
-        self.weights -= self.dw
-        self.biases -= self.db
+        self.weights -= self.weights.grad
+        self.biases -= self.biases.grad
 
     def parameters(self) -> list[Tensor]:
         return [self.weights, self.biases]

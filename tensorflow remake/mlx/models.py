@@ -1,6 +1,7 @@
 from layers import Layer
 from tensor import Tensor
 import mlx.core as mx
+from losses import Loss
 
 
 class Model:
@@ -32,8 +33,9 @@ class Model:
         raise NotImplementedError
 
 class Sequential(Model):
-    def __init__(self, learning_rate: float=0.01) -> None:
+    def __init__(self, loss: Loss, learning_rate: float=0.01) -> None:
         self.layers: list[Layer] = []
+        self.loss = loss
         self.learning_rate: float = learning_rate
 
         super().__init__()
@@ -55,12 +57,8 @@ class Sequential(Model):
     def backwards(self, input: Tensor, target: Tensor):
         self.forward(input)
 
-        # dz = [self.layers[-1].weights.backward(target)]
-        # self.layers[-1].backwards(dz[0])
-
-        # for i in range(len(self.layers)-1):
-        #     dz.append(self.layers[-2-i].derivative(self.layers[-2-i].last_output) * mx.matmul(self.layers[-1-i].weights.T(), dz[i]))
-        #     self.layers[-2-i].backwards(dz[1+i])
+        loss = self.loss(self.layers[-1].last_output, target)
+        loss.backward()
 
         self.update()
 
@@ -69,9 +67,9 @@ class Sequential(Model):
             layer.update()
 
     def train(self, inputs: Tensor, targets: Tensor, epoch: int, validation: tuple[Tensor, Tensor] | None = None):
-        # for _ in range(epoch):
-        #     for i in range(len(inputs)):
-        #         self.backwards(inputs[i], targets[i])
+        for _ in range(epoch):
+            for i in range(len(inputs)):
+                self.backwards(inputs[i], targets[i])
         pass
 
     def parameters(self) -> list[Tensor]:
