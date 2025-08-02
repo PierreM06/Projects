@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neural Graph Visualizer</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      font-family: sans-serif;
+      background-color: #ffffff;
+    }
+    body {
+      display: flex;
+      overflow: hidden;
+    }
+    #sidebar {
+      width: 250px;
+      background-color: #f4f4f4;
+      color: #333;
+      padding: 10px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #ccc;
+      transition: width 0.3s ease;
+    }
+    #sidebar.collapsed {
+      width: 60px;
+      padding: 10px 5px;
+      align-items: center;
+    }
+    #sidebar-icons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .sidebar-icon {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      background-color: #e0e0e0;
+      border-radius: 5px;
+      cursor: pointer;
+      padding: 0 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    #sidebar.collapsed .sidebar-icon {
+      justify-content: center;
+      width: 40px;
+      padding: 0;
+    }
+    .sidebar-icon .label-full {
+      display: inline;
+    }
+    .sidebar-icon .label-short {
+      display: none;
+    }
+    #sidebar.collapsed .sidebar-icon .label-full {
+      display: none;
+    }
+    #sidebar.collapsed .sidebar-icon .label-short {
+      display: inline;
+    }
+    .sidebar-icon.active {
+      background-color: #b0c4de;
+      font-weight: bold;
+    }
+    .sidebar-icon:hover {
+      background-color: #ccc;
+    }
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      position: relative;
+    }
+    #viewer {
+      flex: 1;
+      border: none;
+      height: 100vh;
+      width: 100%;
+      display: block;
+    }
+    #details {
+      width: 300px;
+      background-color: #f9f9f9;
+      border-left: 1px solid #ccc;
+      padding: 10px;
+      overflow-y: auto;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    #tab-buttons-wrapper {
+      position: absolute;
+      top: 10px;
+      right: 290px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10;
+      transform: translateX(-100%);
+    }
+    .tab-button {
+      cursor: pointer;
+      font-size: 20px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      outline: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 5px;
+      text-align: center;
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
+      background-color: white;
+      padding: 0;
+    }
+    .tab-button.active {
+      font-weight: bold;
+      background-color: #b0c4de;
+      border-right: none;
+      margin-right: -1px;
+    }
+    .tab-content {
+      flex: 1;
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .menu-button {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      background: #f0f0f0;
+      color: #333;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      height: 40px;
+      padding: 0 10px;
+      transition: all 0.3s ease;
+    }
+    #sidebar.collapsed .menu-button {
+      justify-content: center;
+      width: 40px;
+      padding: 0;
+    }
+    .menu-button span {
+      margin-left: 10px;
+    }
+    #sidebar.collapsed .menu-button span {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar">
+    <div class="menu-button" onclick="toggleSidebar()">&#9776;<span>Visualizations</span></div>
+    <ul id="vis-list" style="display:none;"></ul>
+    <div id="sidebar-icons"></div>
+  </div>
+  <div id="main">
+    <iframe id="viewer" src="pyvis_graph.html"></iframe>
+    <div id="tab-buttons-wrapper"></div>
+    <div id="details"></div>
+  </div>
+
+  <script>
+    const viewer = document.getElementById("viewer");
+    const details = document.getElementById("details");
+    const visList = document.getElementById("vis-list");
+    const sidebar = document.getElementById("sidebar");
+    const sidebarIcons = document.getElementById("sidebar-icons");
+    const tabButtonsWrapper = document.getElementById("tab-buttons-wrapper");
+
+    let currentVis = "computational_graph";
+    const panelContents = {
+      info: {
+        icon: "ⓘ",
+        html: '<div class="tab-content active">Click on a node or edge to view details.</div>'
+      },
+      settings: {
+        icon: "⚒️",
+        html: '<div class="tab-content">Settings go here...</div>'
+      }
+    };
+
+    function toggleSidebar() {
+      sidebar.classList.toggle("collapsed");
+    }
+
+    const visualizations = {
+      "computational_graph": "pyvis_graph.html"
+    };
+
+    function getCollapsedLabel(name) {
+      const parts = name.split("_");
+      return parts.map(p => p[0].toUpperCase()).join("");
+    }
+
+    function selectPanel(key) {
+      document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(tab => tab.remove());
+      document.getElementById(`btn-${key}`).classList.add('active');
+      details.insertAdjacentHTML('beforeend', panelContents[key].html);
+    }
+
+    Object.entries(panelContents).forEach(([key, { icon }]) => {
+      const button = document.createElement("button");
+      button.id = `btn-${key}`;
+      button.className = `tab-button${key === 'info' ? ' active' : ''}`;
+      button.innerText = icon;
+      button.onclick = () => selectPanel(key);
+      tabButtonsWrapper.appendChild(button);
+    });
+
+    details.innerHTML = panelContents.info.html;
+
+    Object.keys(visualizations).forEach(key => {
+      const icon = document.createElement("div");
+      icon.className = "sidebar-icon";
+      icon.title = key;
+      const fullLabel = key.replace(/_/g, ' ');
+      const shortLabel = getCollapsedLabel(key);
+
+      const labelFull = document.createElement("span");
+      labelFull.className = "label-full";
+      labelFull.textContent = fullLabel;
+
+      const labelShort = document.createElement("span");
+      labelShort.className = "label-short";
+      labelShort.textContent = shortLabel;
+
+      icon.appendChild(labelShort);
+      icon.appendChild(labelFull);
+
+      if (key === currentVis) icon.classList.add("active");
+
+      icon.onclick = () => {
+        currentVis = key;
+        viewer.src = visualizations[key];
+        selectPanel("info");
+
+        document.querySelectorAll('.sidebar-icon').forEach(el => el.classList.remove('active'));
+        icon.classList.add("active");
+      };
+
+      sidebarIcons.appendChild(icon);
+    });
+
+    window.addEventListener("message", (event) => {
+      if (event.data && event.data.type === "details") {
+        const tab = document.querySelector("#details .tab-content");
+        if (tab) tab.innerHTML = `<pre>${JSON.stringify(event.data.payload, null, 2)}</pre>`;
+      }
+    });
+  </script>
+</body>
+</html>
